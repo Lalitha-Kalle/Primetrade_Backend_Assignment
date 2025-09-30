@@ -73,6 +73,7 @@ exports.login = async (req, res) => {
     // Input validation
     if (!email || !password) {
       return res
+        .status(400)
         .json(new ApiResponse(400, null, "Please provide email and password"));
     }
 
@@ -80,6 +81,7 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) {
       return res
+        .status(401)
         .json(new ApiResponse(401, null, "Invalid credentials"));
     }
 
@@ -87,6 +89,7 @@ exports.login = async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res
+        .status(401)
         .json(new ApiResponse(401, null, "Invalid credentials"));
     }
 
@@ -101,6 +104,7 @@ exports.login = async (req, res) => {
     );
 
     return res
+      .status(200)
       .json(
         new ApiResponse(
           200,
@@ -119,6 +123,7 @@ exports.login = async (req, res) => {
   } catch (err) {
     console.error("Login error:", err);
     return res
+      .status(500)
       .json(new ApiResponse(500, null, "Error logging in"));
   }
 };

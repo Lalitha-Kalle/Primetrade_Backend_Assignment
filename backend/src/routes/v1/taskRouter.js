@@ -7,6 +7,7 @@ const {
   getTaskById,
   updateTask,
   deleteTask,
+  getMyTasks,
 } = require("../../controllers/taskController");
 
 const router = express.Router();
@@ -25,5 +26,7 @@ router.put("/:id", authenticate, authorize(["user", "admin"]), updateTask);
 
 //  Delete task (admin only)
 router.delete("/:id", authenticate, authorize(["admin"]), deleteTask);
+
+
 
 module.exports = router;

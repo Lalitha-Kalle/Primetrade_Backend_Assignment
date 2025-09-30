@@ -1,77 +1,112 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api/axios";
-import  useAuth  from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 const Register = () => {
-  const login  = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user" // Default role
+  });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
+
     try {
-      const res = await API.post("/auth/register", { name, email, password });
-      login(res.data.data); // auto-login after register
-      navigate("/dashboard");
+      const result = await register(formData);
+      if (result.success) {
+        navigate("/dashboard");
+      } else {
+        setError(result.message);
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      setError(err.message || "Registration failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm"
-      >
+      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold text-center mb-6">Register</h2>
-
+        
         {error && (
-          <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
         )}
 
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Name</label>
-          <input
-            type="text"
-            className="w-full border px-3 py-2 rounded focus:outline-none focus:ring focus:ring-blue-300"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-gray-700 mb-2">Name</label>
+            <input
+              type="text"
+              name="name"
+              className="w-full border px-3 py-2 rounded"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              required
+            />
+          </div>
 
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Email</label>
-          <input
-            type="email"
-            className="w-full border px-3 py-2 rounded focus:outline-none focus:ring focus:ring-blue-300"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
+          <div>
+            <label className="block text-gray-700 mb-2">Email</label>
+            <input
+              type="email"
+              name="email"
+              className="w-full border px-3 py-2 rounded"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              required
+            />
+          </div>
 
-        <div className="mb-6">
-          <label className="block text-gray-700 mb-2">Password</label>
-          <input
-            type="password"
-            className="w-full border px-3 py-2 rounded focus:outline-none focus:ring focus:ring-blue-300"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <div>
+            <label className="block text-gray-700 mb-2">Password</label>
+            <input
+              type="password"
+              name="password"
+              className="w-full border px-3 py-2 rounded"
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              required
+              minLength={6}
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 mb-2">Role</label>
+            <input
+              type="text"
+              name="role"
+              className="w-full border px-3 py-2 rounded"
+              value={formData.role}
+              onChange={(e) => setFormData({...formData, role: e.target.value.toLowerCase()})}
+              placeholder="Enter 'user' or 'admin'"
+              pattern="^(user|admin)$"
+              title="Please enter either 'user' or 'admin'"
+              required
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Enter either 'user' or 'admin'
+            </p>
+          </div>
         </div>
 
         <button
           type="submit"
-          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+          className="w-full bg-blue-500 text-white py-2 px-4 rounded mt-6 hover:bg-blue-600 disabled:opacity-50"
+          disabled={loading}
         >
-          Register
+          {loading ? "Registering..." : "Register"}
         </button>
       </form>
     </div>

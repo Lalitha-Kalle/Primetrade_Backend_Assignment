@@ -2,22 +2,46 @@ const Task = require("../models/Task");
 const ApiResponse = require("../utils/ApiResponse");
 
 // Create task (any user)
+
 exports.createTask = async (req, res) => {
   try {
     const { title, description, status } = req.body;
 
-    console.log(req.user.sub)
+    // Enhanced validation
+    if (!title || title.trim().length < 3) {
+      return res.status(400).json(
+        new ApiResponse(400, null, "Title is required and must be at least 3 characters")
+      );
+    }
 
+    // Validate status
+    const validStatuses = ['pending', 'in-progress', 'completed'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json(
+        new ApiResponse(400, null, "Invalid status value")
+      );
+    }
+
+    // Create task with user ID from auth middleware
     const task = await Task.create({
-      title,
-      description,
-      status: status ,
-      createdBy: req.user.sub,  // logged-in user
+      title: title.trim(),
+      description: description ? description.trim() : '',
+      status: status || 'pending',
+      createdBy: req.user.id  // Using id from auth middleware
     });
 
-    res.status(201).json(new ApiResponse(201, task, "Task created successfully"));
+    // Populate creator details
+    await task.populate('createdBy', 'name email');
+
+    return res.status(201).json(
+      new ApiResponse(201, task, "Task created successfully")
+    );
+
   } catch (err) {
-    res.status(500).json(new ApiResponse(500, null, "Error creating task"));
+    console.error('Task creation error:', err);
+    return res.status(500).json(
+      new ApiResponse(500, null, err.message || "Error creating task")
+    );
   }
 };
 
@@ -55,21 +79,56 @@ exports.getTaskById = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const { title, description, status } = req.body;
 
-    let task = await Task.findById(id);
+    // Find task and check ownership
+    const task = await Task.findById(id);
     if (!task) {
-      return res.status(404).json(new ApiResponse(404, null, "Task not found"));
+      return res.status(404).json(
+        new ApiResponse(404, null, "Task not found")
+      );
     }
 
-    if (req.user.role !== "admin" && task.createdBy.toString() !== req.user.sub) {
-      return res.status(403).json(new ApiResponse(403, null, "Forbidden"));
+    // Allow update if admin or task owner
+    if (!req.user.role === 'admin' && task.createdBy.toString() !== req.user.id) {
+      return res.status(403).json(
+        new ApiResponse(403, null, "Not authorized to update this task")
+      );
     }
 
-    task = await Task.findByIdAndUpdate(id, updates, { new: true });
-    res.json(new ApiResponse(200, task, "Task updated successfully"));
+    // Validate status if provided
+    if (status) {
+      const validStatuses = ['pending', 'in-progress', 'completed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json(
+          new ApiResponse(400, null, "Invalid status value")
+        );
+      }
+    }
+
+    // Update task
+    const updatedTask = await Task.findByIdAndUpdate(
+      id,
+      {
+        ...(title && { title: title.trim() }),
+        ...(description && { description: description.trim() }),
+        ...(status && { status })
+      },
+      { 
+        new: true,
+        runValidators: true 
+      }
+    ).populate('createdBy', 'name email');
+
+    return res.status(200).json(
+      new ApiResponse(200, updatedTask, "Task updated successfully")
+    );
+
   } catch (err) {
-    res.status(500).json(new ApiResponse(500, null, "Error updating task"));
+    console.error('Task update error:', err);
+    return res.status(500).json(
+      new ApiResponse(500, null, err.message || "Error updating task")
+    );
   }
 };
 

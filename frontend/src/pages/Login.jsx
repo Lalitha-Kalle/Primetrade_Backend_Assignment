@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api/axios";
-import  useAuth  from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
-  const  login  = useAuth();
+  const { login, loading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,12 +11,17 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
     try {
-      const res = await API.post("/auth/login", { email, password });
-      login(res.data.data); // store user + token in context
-      navigate("/dashboard");
+      const result = await login({ email, password });
+      if (result.success) {
+        navigate("/dashboard");
+      } else {
+        setError(result.message);
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError("An error occurred during login");
     }
   };
 
@@ -41,6 +45,7 @@ const Login = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={loading}
           />
         </div>
 
@@ -52,14 +57,16 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={loading}
           />
         </div>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          disabled={loading}
         >
-          Login
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
     </div>
